@@ -94,7 +94,7 @@ def download_comments_for_post(post_id):
     limit = 1200
     fields = ['message', 'created_time', 'from', 'id', 'attachment', 'object', 'parent', 'message_tags'
               ]
-    data = graph.get(post_id + "/feed?fields=" + ','.join(fields), page=False, retry=5, limit=limit)
+    data = graph.get(post_id + "/comments?filter=stream&summary=1&fields=" + ','.join(fields), page=False, retry=5, limit=limit)
     comments = data['data']
     print(post_id, ': ', len(comments))
     return comments
@@ -187,7 +187,7 @@ if __name__ == '__main__':
         'scitani_ceskych_a_slovenskych_otaku': '135384786514720'
     }
 
-    treshold = Month(year=2017, month=9)
+    treshold = Month(year=2017, month=11)
 
     graph = GraphAPI(access_token)
     main()
