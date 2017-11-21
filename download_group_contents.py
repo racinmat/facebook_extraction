@@ -6,6 +6,13 @@ from datetime import datetime
 import os
 from dateutil.relativedelta import relativedelta
 from facepy import GraphAPI
+from enum import Enum
+
+
+class Type(Enum):
+    POST = 1
+    COMMENT = 2
+    REACTION = 3
 
 
 class Month:
@@ -100,20 +107,27 @@ def download_comments_for_post(post_id):
     return comments
 
 
-def save_posts_month(posts, group_name, month):
-    directory = get_posts_dir(group_name)
+def save_data_month(data, group_name, month, type):
+    if type == Type.POST:
+        directory = get_posts_dir(group_name)
+        file = get_posts_file(group_name, month)
+    elif type == Type.COMMENT:
+        directory = get_comments_dir(group_name)
+        file = get_comments_file(group_name, month)
+    else:
+        raise Exception('unknown type')
     if not os.path.exists(directory):
         os.makedirs(directory)
-    with open(get_posts_file(group_name, month), 'w+', encoding='utf-8') as file:
-        json.dump(posts, file)
+    with open(file, 'w+', encoding='utf-8') as file:
+        json.dump(data, file)
+
+
+def save_posts_month(posts, group_name, month):
+    save_data_month(posts, group_name, month, Type.POST)
 
 
 def save_comments_month(comments, group_name, month):
-    directory = get_comments_dir(group_name)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    with open(get_comments_file(group_name, month), 'w+', encoding='utf-8') as file:
-        json.dump(comments, file)
+    save_data_month(comments, group_name, month, Type.COMMENT)
 
 
 def download_group_posts(group_name, group_id):
