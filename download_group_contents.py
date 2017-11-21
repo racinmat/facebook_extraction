@@ -108,17 +108,12 @@ def download_comments_for_post(post_id):
 
 
 def save_data_month(data, group_name, month, type):
-    if type == Type.POST:
-        directory = get_posts_dir(group_name)
-        file = get_posts_file(group_name, month)
-    elif type == Type.COMMENT:
-        directory = get_comments_dir(group_name)
-        file = get_comments_file(group_name, month)
-    else:
-        raise Exception('unknown type')
+    directory = get_dir(group_name, type)
+    file_name = get_file(group_name, month, type)
+
     if not os.path.exists(directory):
         os.makedirs(directory)
-    with open(file, 'w+', encoding='utf-8') as file:
+    with open(file_name, 'w+', encoding='utf-8') as file:
         json.dump(data, file)
 
 
@@ -138,7 +133,7 @@ def download_group_posts(group_name, group_id):
         month = get_last_processed_month_posts(group_name).get_previous_month()
 
 
-def download_group_comments(group_name, group_id):
+def download_group_comments(group_name):
     month = get_last_processed_month_comments(group_name).get_previous_month()
     while month >= treshold:
         comments = download_comments_month(group_name, month)
@@ -146,55 +141,51 @@ def download_group_comments(group_name, group_id):
         month = get_last_processed_month_comments(group_name).get_previous_month()
 
 
-def get_posts_dir(group_name):
-    return 'texts/{}/posts'.format(group_name)
+def get_dir(group_name, type):
+    if type == Type.POST:
+        directory = 'texts/{}/posts'.format(group_name)
+    elif type == Type.COMMENT:
+        directory = 'texts/{}/comments'.format(group_name)
+    else:
+        raise Exception('unknown type')
+    return directory
 
 
-def get_comments_dir(group_name):
-    return 'texts/{}/comments'.format(group_name)
+def get_file(group_name, month, type):
+    return os.path.join(get_dir(group_name, type), '{}.json'.format(month))
 
 
-def get_posts_file(group_name, month):
-    return os.path.join(get_posts_dir(group_name), '{}.json'.format(month))
+def get_last_processed_month(group_name, type):
+    directory = get_dir(group_name, type)
+    earliest = Month().get_next_month()
 
-
-def get_comments_file(group_name, month):
-    return os.path.join(get_comments_dir(group_name), '{}.json'.format(month))
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    for string in os.listdir(directory):
+        month = Month.from_str(string.replace('.json', ''))
+        if month <= earliest:
+            earliest = month
+    return earliest
 
 
 def get_last_processed_month_posts(group_name):
-    directory = get_posts_dir(group_name)
-    earliest = Month().get_next_month()
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    for string in os.listdir(directory):
-        month = Month.from_str(string.replace('.json', ''))
-        if month <= earliest:
-            earliest = month
-    return earliest
+    return get_last_processed_month(group_name, Type.POST)
 
 
 def get_last_processed_month_comments(group_name):
-    directory = get_comments_dir(group_name)
-    earliest = Month().get_next_month()
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    for string in os.listdir(directory):
-        month = Month.from_str(string.replace('.json', ''))
-        if month <= earliest:
-            earliest = month
-    return earliest
+    return get_last_processed_month(group_name, Type.COMMENT)
 
 
 def main():
     for group_name, group_id in groups.items():
         download_group_posts(group_name, group_id)
-        download_group_comments(group_name, group_id)
+        download_group_comments(group_name)
+        download_group_reactions(group_name)
 
 
 if __name__ == '__main__':
-    with open('credentials.json') as file:
-        credentials = json.load(file)
+    with open('credentials.json') as config_file:
+        credentials = json.load(config_file)
         access_token = credentials['extended_access_token']
 
     groups = {
