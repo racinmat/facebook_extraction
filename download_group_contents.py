@@ -8,6 +8,8 @@ from dateutil.relativedelta import relativedelta
 from facepy import GraphAPI
 from enum import Enum
 
+from progressbar import ProgressBar, Percentage, Bar
+
 
 class Type(Enum):
     POST = 1
@@ -85,7 +87,7 @@ def download_posts_month(group_id, month):
     posts = data['data']
     if len(posts) == limit:
         print({'{} has limit posts, need to paginate'.format(month)})
-    print(month, ': ', len(posts))
+    # print(month, ': ', len(posts))
     return posts
 
 
@@ -94,9 +96,12 @@ def download_comments_month(group_name, month):
         posts = json.load(file)
     post_ids = [i['id'] for i in posts]
     comments = []
-    for post_id in post_ids:
+    pbar = ProgressBar(widgets=[Percentage(), Bar()], maxval=len(post_ids)).start()
+    for i, post_id in enumerate(post_ids):
         comments += download_comments_for_post(post_id)
-    print(month, ': ', len(comments))
+        pbar.update(i+1)
+    pbar.finish()
+    # print(month, ': ', len(comments))
     return comments
 
 
@@ -109,9 +114,12 @@ def download_reactions_month(group_name, month):
     comment_ids = [i['id'] for i in comments]
     object_ids = post_ids + comment_ids
     reactions = []
-    for object_id in object_ids:
+    pbar = ProgressBar(widgets=[Percentage(), Bar()], maxval=len(object_ids)).start()
+    for i, object_id in enumerate(object_ids):
         reactions += download_reactions_for_object(object_id)
-    return comments
+        pbar.update(i+1)
+    pbar.finish()
+    return reactions
 
 
 def download_comments_for_post(post_id):
@@ -120,7 +128,7 @@ def download_comments_for_post(post_id):
     data = graph.get(post_id + "/comments?filter=stream&summary=1&fields=" + ','.join(fields), page=False,
                      retry=5, limit=limit)
     comments = data['data']
-    print(post_id, ': ', len(comments))
+    # print(post_id, ': ', len(comments))
     return comments
 
 
@@ -132,7 +140,7 @@ def download_reactions_for_object(object_id):
     reactions = data['data']
     for reaction in reactions:
         reaction['object_id'] = object_id
-    print(object_id, ': ', len(reactions))
+    # print(object_id, ': ', len(reactions))
     return reactions
 
 
@@ -149,6 +157,7 @@ def save_data_month(data, group_name, month, type):
 def download_group_posts(group_name, group_id):
     month = get_last_processed_month(group_name, Type.POST).get_previous_month()
     while month >= treshold:
+        print("processing posts in month {}".format(month))
         posts = download_posts_month(group_id, month)
         save_data_month(posts, group_name, month, Type.POST)
         month = get_last_processed_month(group_name, Type.POST).get_previous_month()
@@ -157,6 +166,7 @@ def download_group_posts(group_name, group_id):
 def download_group_comments(group_name):
     month = get_last_processed_month(group_name, Type.COMMENT).get_previous_month()
     while month >= treshold:
+        print("processing comments in month {}".format(month))
         comments = download_comments_month(group_name, month)
         save_data_month(comments, group_name, month, Type.COMMENT)
         month = get_last_processed_month(group_name, Type.COMMENT).get_previous_month()
@@ -165,6 +175,7 @@ def download_group_comments(group_name):
 def download_group_reactions(group_name):
     month = get_last_processed_month(group_name, Type.REACTION).get_previous_month()
     while month >= treshold:
+        print("processing reactions in month {}".format(month))
         reactions = download_reactions_month(group_name, month)
         save_data_month(reactions, group_name, month, Type.REACTION)
         month = get_last_processed_month(group_name, Type.REACTION).get_previous_month()
