@@ -69,6 +69,9 @@ class Month:
     def __ge__(self, other):
         return self.timestamp() >= other.timestamp()
 
+    def __eq__(self, other):
+        return self.timestamp() == other.timestamp()
+
 
 def download_posts_month(group_id, month):
     since = month.get_since()
@@ -126,9 +129,11 @@ def download_reactions_for_object(object_id):
     # fields = ['id', 'name', 'type', 'profile_type']
     fields = ['id', 'name', 'type']
     data = graph.get(object_id + "/reactions?fields=" + ','.join(fields), page=False, retry=5, limit=limit)
-    comments = data['data']
-    print(object_id, ': ', len(comments))
-    return comments
+    reactions = data['data']
+    for reaction in reactions:
+        reaction['object_id'] = object_id
+    print(object_id, ': ', len(reactions))
+    return reactions
 
 
 def save_data_month(data, group_name, month, type):
@@ -171,7 +176,7 @@ def get_dir(group_name, type):
     elif type == Type.COMMENT:
         directory = 'texts/{}/comments'.format(group_name)
     elif type == Type.REACTION:
-        directory = 'texts/{}/comments'.format(group_name)
+        directory = 'texts/{}/reactions'.format(group_name)
     else:
         raise Exception('unknown type')
     return directory
@@ -210,7 +215,7 @@ if __name__ == '__main__':
         'scitani_ceskych_a_slovenskych_otaku': '135384786514720'
     }
 
-    treshold = Month(year=2017, month=10)
+    treshold = Month(year=2017, month=11)
 
     graph = GraphAPI(access_token)
     main()
