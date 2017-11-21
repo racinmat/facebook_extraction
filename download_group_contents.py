@@ -22,6 +22,11 @@ class Month:
         date.replace(year=self.year, month=self.month)
         self.date = date
 
+    def get_next_month(self):
+        next = self.date + relativedelta(months=+1)
+        next_month = Month(next.year, next.month)
+        return next_month
+
     def get_previous_month(self):
         previous = self.date + relativedelta(months=-1)
         previous_month = Month(previous.year, previous.month)
@@ -51,12 +56,22 @@ class Month:
     def __gt__(self, other):
         return self.timestamp() > other.timestamp()
 
+    def __le__(self, other):
+        return self.timestamp() <= other.timestamp()
+
+    def __ge__(self, other):
+        return self.timestamp() >= other.timestamp()
+
 
 def download_posts_month(group_id, month):
     since = month.get_since()
     until = month.get_until()
-    limit = 1000
-    data = graph.get(group_id + "/feed", page=False, retry=3, since=since, until=until, limit=limit)
+    limit = 1200
+    fields = ['message', 'message_tags', 'created_time', 'updated_time', 'caption', 'description', 'story', 'from',
+              'icon', 'properties', 'shares', 'link', 'name', 'object_id', 'parent_id', 'permalink_url', 'source',
+              'status_type', 'target', 'type', 'to', 'with_tags'
+              ]
+    data = graph.get(group_id + "/feed?fields=" + ','.join(fields), page=False, retry=5, since=since, until=until, limit=limit)
     posts = data['data']
     if len(posts) == limit:
         print({'{} has limit posts, need to paginate'.format(month)})
@@ -64,36 +79,103 @@ def download_posts_month(group_id, month):
     return posts
 
 
+def download_comments_month(group_name, month):
+    with open(get_posts_file(group_name, month), 'r', encoding='utf-8') as file:
+        posts = json.load(file)
+    post_ids = [i['id'] for i in posts]
+    comments = []
+    for post_id in post_ids:
+        comments += download_comments_for_post(post_id)
+    print(month, ': ', len(comments))
+    return comments
+
+
+def download_comments_for_post(post_id):
+    limit = 1200
+    fields = ['message', 'created_time', 'from', 'id', 'attachment', 'object', 'parent', 'message_tags'
+              ]
+    data = graph.get(post_id + "/feed?fields=" + ','.join(fields), page=False, retry=5, limit=limit)
+    comments = data['data']
+    print(post_id, ': ', len(comments))
+    return comments
+
+
 def save_posts_month(posts, group_name, month):
     directory = get_posts_dir(group_name)
     if not os.path.exists(directory):
         os.makedirs(directory)
-    with open(os.path.join(directory, '{}.json'.format(month)), 'w+') as file:
+    with open(get_posts_file(group_name, month), 'w+', encoding='utf-8') as file:
         json.dump(posts, file)
-    # pickle.dumps(posts, open('texts/{}/{}.txt'.format(group_name, month), 'wb+'))
+
+
+def save_comments_month(comments, group_name, month):
+    directory = get_comments_dir(group_name)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    with open(get_comments_file(group_name, month), 'w+', encoding='utf-8') as file:
+        json.dump(comments, file)
 
 
 def download_group_posts(group_name, group_id):
-    treshold = Month(year=2005, month=1)
     month = get_last_processed_month_posts(group_name).get_previous_month()
-    while month > treshold:
+    while month >= treshold:
         posts = download_posts_month(group_id, month)
         save_posts_month(posts, group_name, month)
         month = get_last_processed_month_posts(group_name).get_previous_month()
+
+
+def download_group_comments(group_name, group_id):
+    month = get_last_processed_month_comments(group_name).get_previous_month()
+    while month >= treshold:
+        comments = download_comments_month(group_name, month)
+        save_comments_month(comments, group_name, month)
+        month = get_last_processed_month_comments(group_name).get_previous_month()
 
 
 def get_posts_dir(group_name):
     return 'texts/{}/posts'.format(group_name)
 
 
+def get_comments_dir(group_name):
+    return 'texts/{}/comments'.format(group_name)
+
+
+def get_posts_file(group_name, month):
+    return os.path.join(get_posts_dir(group_name), '{}.json'.format(month))
+
+
+def get_comments_file(group_name, month):
+    return os.path.join(get_comments_dir(group_name), '{}.json'.format(month))
+
+
 def get_last_processed_month_posts(group_name):
     directory = get_posts_dir(group_name)
-    earliest = Month()
+    earliest = Month().get_next_month()
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     for string in os.listdir(directory):
         month = Month.from_str(string.replace('.json', ''))
-        if month < earliest:
+        if month <= earliest:
             earliest = month
     return earliest
+
+
+def get_last_processed_month_comments(group_name):
+    directory = get_comments_dir(group_name)
+    earliest = Month().get_next_month()
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    for string in os.listdir(directory):
+        month = Month.from_str(string.replace('.json', ''))
+        if month <= earliest:
+            earliest = month
+    return earliest
+
+
+def main():
+    for group_name, group_id in groups.items():
+        download_group_posts(group_name, group_id)
+        download_group_comments(group_name, group_id)
 
 
 if __name__ == '__main__':
@@ -105,7 +187,7 @@ if __name__ == '__main__':
         'scitani_ceskych_a_slovenskych_otaku': '135384786514720'
     }
 
-    graph = GraphAPI(access_token)
+    treshold = Month(year=2017, month=9)
 
-    for group_name, group_id in groups.items():
-        download_group_posts(group_name, group_id)
+    graph = GraphAPI(access_token)
+    main()
