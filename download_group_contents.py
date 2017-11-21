@@ -87,7 +87,7 @@ def download_posts_month(group_id, month):
 
 
 def download_comments_month(group_name, month):
-    with open(get_posts_file(group_name, month), 'r', encoding='utf-8') as file:
+    with open(get_file(group_name, month, Type.POST), 'r', encoding='utf-8') as file:
         posts = json.load(file)
     post_ids = [i['id'] for i in posts]
     comments = []
@@ -97,13 +97,37 @@ def download_comments_month(group_name, month):
     return comments
 
 
+def download_reactions_month(group_name, month):
+    with open(get_file(group_name, month, Type.POST), 'r', encoding='utf-8') as file:
+        posts = json.load(file)
+    post_ids = [i['id'] for i in posts]
+    with open(get_file(group_name, month, Type.COMMENT), 'r', encoding='utf-8') as file:
+        comments = json.load(file)
+    comment_ids = [i['id'] for i in comments]
+    object_ids = post_ids + comment_ids
+    reactions = []
+    for object_id in object_ids:
+        reactions += download_reactions_for_object(object_id)
+    return comments
+
+
 def download_comments_for_post(post_id):
     limit = 1200
-    fields = ['message', 'created_time', 'from', 'id', 'attachment', 'object', 'parent', 'message_tags'
-              ]
-    data = graph.get(post_id + "/comments?filter=stream&summary=1&fields=" + ','.join(fields), page=False, retry=5, limit=limit)
+    fields = ['message', 'created_time', 'from', 'id', 'attachment', 'object', 'parent', 'message_tags']
+    data = graph.get(post_id + "/comments?filter=stream&summary=1&fields=" + ','.join(fields), page=False,
+                     retry=5, limit=limit)
     comments = data['data']
     print(post_id, ': ', len(comments))
+    return comments
+
+
+def download_reactions_for_object(object_id):
+    limit = 1200
+    # fields = ['id', 'name', 'type', 'profile_type']
+    fields = ['id', 'name', 'type']
+    data = graph.get(object_id + "/reactions?fields=" + ','.join(fields), page=False, retry=5, limit=limit)
+    comments = data['data']
+    print(object_id, ': ', len(comments))
     return comments
 
 
@@ -117,34 +141,36 @@ def save_data_month(data, group_name, month, type):
         json.dump(data, file)
 
 
-def save_posts_month(posts, group_name, month):
-    save_data_month(posts, group_name, month, Type.POST)
-
-
-def save_comments_month(comments, group_name, month):
-    save_data_month(comments, group_name, month, Type.COMMENT)
-
-
 def download_group_posts(group_name, group_id):
-    month = get_last_processed_month_posts(group_name).get_previous_month()
+    month = get_last_processed_month(group_name, Type.POST).get_previous_month()
     while month >= treshold:
         posts = download_posts_month(group_id, month)
-        save_posts_month(posts, group_name, month)
-        month = get_last_processed_month_posts(group_name).get_previous_month()
+        save_data_month(posts, group_name, month, Type.POST)
+        month = get_last_processed_month(group_name, Type.POST).get_previous_month()
 
 
 def download_group_comments(group_name):
-    month = get_last_processed_month_comments(group_name).get_previous_month()
+    month = get_last_processed_month(group_name, Type.COMMENT).get_previous_month()
     while month >= treshold:
         comments = download_comments_month(group_name, month)
-        save_comments_month(comments, group_name, month)
-        month = get_last_processed_month_comments(group_name).get_previous_month()
+        save_data_month(comments, group_name, month, Type.COMMENT)
+        month = get_last_processed_month(group_name, Type.COMMENT).get_previous_month()
+
+
+def download_group_reactions(group_name):
+    month = get_last_processed_month(group_name, Type.REACTION).get_previous_month()
+    while month >= treshold:
+        reactions = download_reactions_month(group_name, month)
+        save_data_month(reactions, group_name, month, Type.REACTION)
+        month = get_last_processed_month(group_name, Type.REACTION).get_previous_month()
 
 
 def get_dir(group_name, type):
     if type == Type.POST:
         directory = 'texts/{}/posts'.format(group_name)
     elif type == Type.COMMENT:
+        directory = 'texts/{}/comments'.format(group_name)
+    elif type == Type.REACTION:
         directory = 'texts/{}/comments'.format(group_name)
     else:
         raise Exception('unknown type')
@@ -168,14 +194,6 @@ def get_last_processed_month(group_name, type):
     return earliest
 
 
-def get_last_processed_month_posts(group_name):
-    return get_last_processed_month(group_name, Type.POST)
-
-
-def get_last_processed_month_comments(group_name):
-    return get_last_processed_month(group_name, Type.COMMENT)
-
-
 def main():
     for group_name, group_id in groups.items():
         download_group_posts(group_name, group_id)
@@ -192,7 +210,7 @@ if __name__ == '__main__':
         'scitani_ceskych_a_slovenskych_otaku': '135384786514720'
     }
 
-    treshold = Month(year=2017, month=11)
+    treshold = Month(year=2017, month=10)
 
     graph = GraphAPI(access_token)
     main()
