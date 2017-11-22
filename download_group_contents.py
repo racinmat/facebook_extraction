@@ -1,14 +1,14 @@
 import json
-import pickle
-import calendar
 from datetime import datetime
-
 import os
+from itertools import chain
+
 from dateutil.relativedelta import relativedelta
 from facepy import GraphAPI
 from enum import Enum
 
-from progressbar import ProgressBar, Percentage, Bar, FileTransferSpeed
+from joblib import Parallel, delayed
+from progressbar import Percentage, Bar, FileTransferSpeed
 
 
 class Type(Enum):
@@ -75,20 +75,19 @@ class Month:
         return self.timestamp() == other.timestamp()
 
 
-def download_posts_month(group_id, month):
+def download_posts_month(group_id, month, limits, retries):
     since = month.get_since()
     until = month.get_until()
-    limit = 1200
     fields = ['message', 'message_tags', 'created_time', 'updated_time', 'caption', 'description', 'story', 'from',
               'icon', 'properties', 'shares', 'link', 'name', 'object_id', 'parent_id', 'permalink_url', 'source',
               'status_type', 'target', 'type', 'to', 'with_tags'
               ]
-    data = graph.get(group_id + "/feed?fields=" + ','.join(fields), page=False, retry=5, since=since, until=until,
-                     limit=limit)
+    data = graph.get(group_id + "/feed?fields=" + ','.join(fields), page=False, retry=retries, since=since, until=until,
+                     limit=limits)
     posts = data['data']
-    if len(posts) == limit:
+    if len(posts) == limits:
         print({'{} has limit posts, need to paginate'.format(month)})
-    # print(month, ': ', len(posts))
+    print(month, ': ', len(posts))
     return posts
 
 
@@ -96,13 +95,21 @@ def download_comments_month(group_name, month):
     with open(get_file(group_name, month, Type.POST), 'r', encoding='utf-8') as file:
         posts = json.load(file)
     post_ids = [i['id'] for i in posts]
-    comments = []
-    pbar = ProgressBar(widgets=widgets, maxval=len(post_ids)).start()
-    pbar.update_interval = len(post_ids)/20
-    for i, post_id in enumerate(post_ids):
-        comments += download_comments_for_post(post_id)
-        pbar.update(i + 1)
-    pbar.finish()
+    # return download_comments_usual(post_ids)
+    return download_comments_parallel(post_ids)
+
+
+def download_comments_usual(post_ids):
+    combined = [download_comments_for_post(post_id, graph, objects_limit, retries) for post_id in post_ids]
+    comments = list(chain.from_iterable(combined))
+    # print(month, ': ', len(comments))
+    return comments
+
+
+def download_comments_parallel(post_ids):
+    combined = Parallel(n_jobs=5)(delayed(download_comments_for_post)
+                                  (post_id, graph, objects_limit, retries) for post_id in post_ids)
+    comments = list(chain.from_iterable(combined))
     # print(month, ': ', len(comments))
     return comments
 
@@ -115,31 +122,36 @@ def download_reactions_month(group_name, month):
         comments = json.load(file)
     comment_ids = [i['id'] for i in comments]
     object_ids = post_ids + comment_ids
-    reactions = []
-    pbar = ProgressBar(widgets=widgets, maxval=len(object_ids)).start()
-    pbar.update_interval = len(object_ids)/20
-    for i, object_id in enumerate(object_ids):
-        reactions += download_reactions_for_object(object_id)
-        pbar.update(i + 1)
-    pbar.finish()
+    # return download_reactions_usual(object_ids)
+    return download_reactions_parallel(object_ids)
+
+
+def download_reactions_usual(object_ids):
+    combined = [download_reactions_for_object(object_id, graph, objects_limit, retries) for object_id in object_ids]
+    reactions = list(chain.from_iterable(combined))
     return reactions
 
 
-def download_comments_for_post(post_id):
-    limit = 1200
+def download_reactions_parallel(object_ids):
+    combined = Parallel(n_jobs=5)(delayed(download_reactions_for_object)
+                                  (object_id, graph, objects_limit, retries) for object_id in object_ids)
+    reactions = list(chain.from_iterable(combined))
+    return reactions
+
+
+def download_comments_for_post(post_id, graph, limits, retries):
     fields = ['message', 'created_time', 'from', 'id', 'attachment', 'object', 'parent', 'message_tags']
     data = graph.get(post_id + "/comments?filter=stream&summary=1&fields=" + ','.join(fields), page=False,
-                     retry=5, limit=limit)
+                     retry=retries, limit=limits)
     comments = data['data']
     # print(post_id, ': ', len(comments))
     return comments
 
 
-def download_reactions_for_object(object_id):
-    limit = 1200
+def download_reactions_for_object(object_id, graph, limits, retries):
     # fields = ['id', 'name', 'type', 'profile_type']
     fields = ['id', 'name', 'type']
-    data = graph.get(object_id + "/reactions?fields=" + ','.join(fields), page=False, retry=5, limit=limit)
+    data = graph.get(object_id + "/reactions?fields=" + ','.join(fields), page=False, retry=retries, limit=limits)
     reactions = data['data']
     for reaction in reactions:
         reaction['object_id'] = object_id
@@ -161,7 +173,7 @@ def download_group_posts(group_name, group_id):
     month = get_last_processed_month(group_name, Type.POST).get_previous_month()
     while month >= treshold:
         print("processing posts in month {}".format(month))
-        posts = download_posts_month(group_id, month)
+        posts = download_posts_month(group_id, month, objects_limit, retries)
         save_data_month(posts, group_name, month, Type.POST)
         month = get_last_processed_month(group_name, Type.POST).get_previous_month()
 
@@ -220,6 +232,18 @@ def main():
         download_group_comments(group_name)
         download_group_reactions(group_name)
 
+#
+# def performance_tests():
+#     start = time.time()
+#     usual = download_comments_month('scitani_ceskych_a_slovenskych_otaku', Month(2017, 11))
+#     end = time.time()
+#     print('time in usual for loop: ', end - start)
+#     start = time.time()
+#     parallel = download_comments_month_parallel('scitani_ceskych_a_slovenskych_otaku', Month(2017, 11))
+#     end = time.time()
+#     print('time in parallel for loop: ', end - start)
+#     pass
+
 
 if __name__ == '__main__':
     with open('credentials.json') as config_file:
@@ -235,7 +259,11 @@ if __name__ == '__main__':
                ' ', FileTransferSpeed(unit='f')]
 
     treshold = Month(year=2005, month=1)
+    # treshold = Month(year=2017, month=11)
+    objects_limit = 1200
+    retries = 10
 
     graph = GraphAPI(access_token)
     main()
-    print("Everything downloaded to month {}".format(graph))
+    # performance_tests()
+    print("Everything downloaded to month {}".format(treshold))
