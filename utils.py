@@ -58,7 +58,6 @@ class Month:
     def between(begin, end):
         months = {begin}
         if begin == end:
-            months.add(end)
             return months
 
         iter = begin.get_next_month()

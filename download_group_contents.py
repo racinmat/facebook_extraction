@@ -35,8 +35,8 @@ if __name__ == '__main__':
 
     utils.texts_root = 'texts'
 
-    utils.treshold = Month(year=2005, month=1)
-    # treshold = Month(year=2017, month=11)
+    # utils.treshold = Month(year=2005, month=1)
+    utils.treshold = Month(year=2017, month=11)
     utils.posts_limit = 1500
     utils.objects_limit = 600
     utils.retries = 10
