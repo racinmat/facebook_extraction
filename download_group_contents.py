@@ -227,7 +227,8 @@ if __name__ == '__main__':
         'scitani_ceskych_a_slovenskych_otaku': '135384786514720'
     }
 
-    treshold = Month(year=2017, month=11)
+    treshold = Month(year=2005, month=1)
 
     graph = GraphAPI(access_token)
     main()
+    print("Everything downloaded to month {}".format(graph))
