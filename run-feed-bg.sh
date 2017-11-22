@@ -1,3 +1,3 @@
 #!/bin/bash
 
-screen -dmSL feeds ./run-feed.sh
+screen -dmSL feeds ./run-feed.sh $@

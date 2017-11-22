@@ -195,36 +195,30 @@ def save_data_month(data, group_name, month, type):
 
 
 def download_group_posts(group_name, group_id):
-    month = get_last_processed_month(group_name, Type.POST).get_previous_month()
-    while month >= treshold:
+    for month in get_missing_months(group_name, Type.POST):
         print("processing posts in month {}".format(month))
         posts = download_posts_month(group_id, month, posts_limit, retries)
         save_data_month(posts, group_name, month, Type.POST)
-        month = get_last_processed_month(group_name, Type.POST).get_previous_month()
 
 
 def download_group_comments(group_name):
     if treshold is None:
         raise Exception('Forgot to initialize treshold')
 
-    month = get_last_processed_month(group_name, Type.COMMENT).get_previous_month()
-    while month >= treshold:
+    for month in get_missing_months(group_name, Type.COMMENT):
         print("processing comments in month {}".format(month))
         comments = download_comments_month(group_name, month)
         save_data_month(comments, group_name, month, Type.COMMENT)
-        month = get_last_processed_month(group_name, Type.COMMENT).get_previous_month()
 
 
 def download_group_reactions(group_name):
     if treshold is None:
         raise Exception('Forgot to initialize treshold')
 
-    month = get_last_processed_month(group_name, Type.REACTION).get_previous_month()
-    while month >= treshold:
+    for month in get_missing_months(group_name, Type.REACTION):
         print("processing reactions in month {}".format(month))
         reactions = download_reactions_month(group_name, month)
         save_data_month(reactions, group_name, month, Type.REACTION)
-        month = get_last_processed_month(group_name, Type.REACTION).get_previous_month()
 
 
 def get_dir(group_name, type):
@@ -247,7 +241,7 @@ def get_last_processed_month(group_name, type):
     # todo: implement checking of missing months
     directory = get_dir(group_name, type)
     # earliest = Month().get_next_month() # not calling get_nexT_month skips current month, resulting in downloadin only complete months
-    last = Month()
+    earliest = Month()
 
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -259,7 +253,7 @@ def get_last_processed_month(group_name, type):
     return earliest
 
 
-def get_mising_months(group_name, type):
+def get_missing_months(group_name, type):
     directory = get_dir(group_name, type)
     last = Month()
 

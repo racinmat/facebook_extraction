@@ -1,8 +1,6 @@
 import json
 from facepy import GraphAPI
 import utils
-from progressbar import Percentage, Bar, FileTransferSpeed
-
 from utils import download_group_posts, download_group_comments, download_group_reactions, Month
 
 
