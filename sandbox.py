@@ -9,9 +9,18 @@ from utils import download_group_posts, download_group_comments, download_group_
 def main():
     group_name = list(groups.keys())[0]
     group_id = list(groups.values())[0]
-    since = datetime(year=2017, month=11, day=5).timestamp()
-    until = datetime(year=2017, month=11, day=22).timestamp()
-    posts = download_posts(group_id, since, until, utils.graph, 1000, retries=10)
+    since = Month(2017, 10).get_since()
+    until = Month(2017, 10).get_until()
+    # until = datetime(year=2017, month=10, day=23).timestamp()
+    # since = datetime(year=2017, month=10, day=1).timestamp()
+
+    # posts = download_posts(group_id, since, until, utils.graph, 1000, retries=10)
+    # with open('posts_test.json', 'w+', encoding='utf-8') as file:
+    #     json.dump(posts, file)
+    with open('posts_test.json', 'r', encoding='utf-8') as file:
+        posts_all = json.load(file)
+    print(len(posts_all))
+    posts = download_posts(group_id, since, until, utils.graph, 100, retries=10)
 
 
 def download_posts(group_id, since, until, graph, limits, retries):
@@ -29,9 +38,15 @@ def download_posts(group_id, since, until, graph, limits, retries):
               ]
     # data = graph.get(group_id + "/feed?fields=" + ','.join(fields), page=False, retry=retries, since=since, until=until,
     #                  limit=limits)
-    data = graph.get(group_id + "/feed", page=False, fields=fields, retry=retries, since=since, until=until,
+    # data = graph.get(group_id + "/feed", page=False, fields=fields, retry=retries, since=since, until=until,
+    #                  limit=limits)
+    # posts = data['data']
+    pages = graph.get(group_id + "/feed", page=True, fields=fields, retry=retries, since=since, until=until,
                      limit=limits)
-    posts = data['data']
+    posts = []
+    for page in pages:
+        print("page len: {}".format(len(page['data'])))
+        posts += page['data']
     return posts
 
 

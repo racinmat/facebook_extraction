@@ -109,11 +109,18 @@ def download_posts_month(group_id, month, graph, limits, retries):
               ]
     # data = graph.get(group_id + "/feed?fields=" + ','.join(fields), page=False, retry=retries, since=since, until=until,
     #                  limit=limits)
-    data = graph.get(group_id + "/feed", page=False, fields=fields, retry=retries, since=since, until=until,
-                     limit=limits)
-    posts = data['data']
-    if len(posts) == limits:
-        print({'{} has limit posts, need to paginate'.format(month)})
+    # data = graph.get(group_id + "/feed", page=False, fields=fields, retry=retries, since=since, until=until,
+    #                  limit=limits)
+    # posts = data['data']
+    # if len(posts) == limits:
+    #     print({'{} has limit posts, need to paginate'.format(month)})
+    pages = graph.get(group_id + "/feed", page=True, fields=fields, retry=retries, since=since, until=until,
+                      limit=limits)
+    posts = []
+    for page in pages:
+        # print("page len: {}".format(len(page['data'])))
+        posts += page['data']
+
     print(month, ': ', len(posts))
     return posts
 
@@ -134,7 +141,7 @@ def download_comments_usual(post_ids):
 
 
 def download_comments_parallel(post_ids):
-    combined = Parallel(n_jobs=5)(delayed(download_comments_for_post)
+    combined = Parallel(n_jobs=10)(delayed(download_comments_for_post)
                                   (post_id, graph, objects_limit, retries) for post_id in post_ids)
     comments = list(chain.from_iterable(combined))
     # print(month, ': ', len(comments))
@@ -160,7 +167,7 @@ def download_reactions_usual(object_ids):
 
 
 def download_reactions_parallel(object_ids):
-    combined = Parallel(n_jobs=5)(delayed(download_reactions_for_object)
+    combined = Parallel(n_jobs=10)(delayed(download_reactions_for_object)
                                   (object_id, graph, objects_limit, retries) for object_id in object_ids)
     reactions = list(chain.from_iterable(combined))
     return reactions
@@ -168,8 +175,8 @@ def download_reactions_parallel(object_ids):
 
 def download_comments_for_post(post_id, graph, limits, retries):
     fields = ['message', 'created_time', 'from', 'id', 'attachment', 'object', 'parent', 'message_tags']
-    data = graph.get(post_id + "/comments?filter=stream&summary=1&fields=" + ','.join(fields), page=False,
-                     retry=retries, limit=limits)
+    data = graph.get(post_id + "/comments", page=False,
+                     retry=retries, limit=limits, summary=1, filter='stream', fields=fields)
     comments = data['data']
     # print(post_id, ': ', len(comments))
     return comments
@@ -185,7 +192,7 @@ def download_reactions_for_object(object_id, graph, limits, retries):
 
     # fields = ['id', 'name', 'type', 'profile_type']
     fields = ['id', 'name', 'type']
-    data = graph.get(object_id + "/reactions?fields=" + ','.join(fields), page=False, retry=retries, limit=limits)
+    data = graph.get(object_id + "/reactions", page=False, retry=retries, fields=fields, limit=limits)
     reactions = data['data']
     for reaction in reactions:
         reaction['object_id'] = object_id
