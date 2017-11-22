@@ -199,7 +199,8 @@ def get_file(group_name, month, type):
 
 def get_last_processed_month(group_name, type):
     directory = get_dir(group_name, type)
-    earliest = Month().get_next_month()
+    # earliest = Month().get_next_month() # not calling get_nexT_month skips current month, resulting in downloadin only complete months
+    earliest = Month()
 
     if not os.path.exists(directory):
         os.makedirs(directory)
