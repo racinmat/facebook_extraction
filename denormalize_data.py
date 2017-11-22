@@ -9,7 +9,8 @@ def main():
 
 
 if __name__ == '__main__':
-    utils.texts_root = 'texts_test'
+    # utils.texts_root = 'texts_test'
+    utils.texts_root = 'texts'
     groups = {
         'scitani_ceskych_a_slovenskych_otaku': '135384786514720'
     }

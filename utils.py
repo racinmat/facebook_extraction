@@ -323,7 +323,6 @@ def unify_data_group(group_name):
             comments[object_id]['reactions'].append(reaction)
 
     for id, comment in comments.items():
-        comment['reactions'] = []
         posts[comment['object']['id']]['comments'].append(comment)
     return posts
 
