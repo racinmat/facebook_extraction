@@ -14,9 +14,13 @@ def transform_to_script(group_name, data, file_name):
             message = '{}, link: {}'.format(post['description'], post['link'])
         elif 'status_type' in post and post['status_type'] == 'added_photos':
             message = 'added photos'
+        elif 'story' in post and post['type'] in ('photo', 'status', 'video'):
+            message = post['story']
+        elif 'attachments' in post and len(post['attachments']['data']) > 0 and post['attachments']['data'][0]['type'] == 'unavailable':
+            continue
         else:
             print(post)
-            raise Exception('Weird post')
+            # raise Exception('Weird post')
 
         created_time = fb_to_datetime(post['created_time']).strftime('%d.%m.%Y %H:%M:%S')
         lines.append('{}: {}: {}'.format(post['from']['name'], created_time, message))
@@ -24,7 +28,7 @@ def transform_to_script(group_name, data, file_name):
             created_time = fb_to_datetime(comment['created_time']).strftime('%d.%m.%Y %H:%M:%S')
             lines.append('{}: {}: {}'.format(comment['from']['name'], created_time, comment['message']))
         lines.append('-' * 15)
-    with open(os.path.join(get_binary_dir(group_name), file_name), 'w+') as file:
+    with open(os.path.join(get_binary_dir(group_name), file_name), 'w+', encoding='utf-8') as file:
         file.writelines(lines=lines)
 
 
