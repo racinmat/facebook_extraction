@@ -263,7 +263,7 @@ def get_missing_months(group_name, type):
     existing_months = set([Month.from_str(s.replace('.json', '')) for s in os.listdir(directory)])
     all_months = Month.between(treshold, last)
     missing_months = list(all_months - existing_months)
-    return missing_months
+    return list(reversed(missing_months))
 
 
 def load_data_month(group_name, month, type):
