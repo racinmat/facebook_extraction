@@ -7,6 +7,7 @@ import pickle
 from dateutil.relativedelta import relativedelta
 from enum import Enum
 from joblib import Parallel, delayed
+from time import time
 
 
 class Type(Enum):
@@ -126,7 +127,7 @@ def download_posts_month(group_id, month, graph, limits, retries):
 
 
 def download_comments_month(group_name, month):
-    with open(get_file(group_name, month, Type.POST), 'r', encoding='utf-8') as file:
+    with open(get_file(texts_root, group_name, month, Type.POST), 'r', encoding='utf-8') as file:
         posts = json.load(file)
     post_ids = [i['id'] for i in posts]
     # return download_comments_usual(post_ids)
@@ -141,18 +142,18 @@ def download_comments_usual(post_ids):
 
 
 def download_comments_parallel(post_ids):
-    combined = Parallel(n_jobs=10)(delayed(download_comments_for_post)
-                                  (post_id, graph, objects_limit, retries) for post_id in post_ids)
+    combined = Parallel(n_jobs=workers)(delayed(download_comments_for_post)
+                                        (post_id, graph, objects_limit, retries) for post_id in post_ids)
     comments = list(chain.from_iterable(combined))
     # print(month, ': ', len(comments))
     return comments
 
 
 def download_reactions_month(group_name, month):
-    with open(get_file(group_name, month, Type.POST), 'r', encoding='utf-8') as file:
+    with open(get_file(texts_root, group_name, month, Type.POST), 'r', encoding='utf-8') as file:
         posts = json.load(file)
     post_ids = [i['id'] for i in posts]
-    with open(get_file(group_name, month, Type.COMMENT), 'r', encoding='utf-8') as file:
+    with open(get_file(texts_root, group_name, month, Type.COMMENT), 'r', encoding='utf-8') as file:
         comments = json.load(file)
     comment_ids = [i['id'] for i in comments]
     object_ids = post_ids + comment_ids
@@ -167,8 +168,8 @@ def download_reactions_usual(object_ids):
 
 
 def download_reactions_parallel(object_ids):
-    combined = Parallel(n_jobs=10)(delayed(download_reactions_for_object)
-                                  (object_id, graph, objects_limit, retries) for object_id in object_ids)
+    combined = Parallel(n_jobs=workers)(delayed(download_reactions_for_object)
+                                        (object_id, graph, objects_limit, retries) for object_id in object_ids)
     reactions = list(chain.from_iterable(combined))
     return reactions
 
@@ -201,8 +202,8 @@ def download_reactions_for_object(object_id, graph, limits, retries):
 
 
 def save_data_month(data, group_name, month, type):
-    directory = get_dir(group_name, type)
-    file_name = get_file(group_name, month, type)
+    directory = get_dir(texts_root, group_name, type)
+    file_name = get_file(texts_root, group_name, month, type)
 
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -237,7 +238,7 @@ def download_group_reactions(group_name):
         save_data_month(reactions, group_name, month, Type.REACTION)
 
 
-def get_dir(group_name, type):
+def get_dir(texts_root, group_name, type):
     if type == Type.POST:
         directory = os.path.join(texts_root, group_name, 'posts')
     elif type == Type.COMMENT:
@@ -249,12 +250,12 @@ def get_dir(group_name, type):
     return directory
 
 
-def get_file(group_name, month, type):
-    return os.path.join(get_dir(group_name, type), '{}.json'.format(month))
+def get_file(texts_root, group_name, month, type):
+    return os.path.join(get_dir(texts_root, group_name, type), '{}.json'.format(month))
 
 
 def get_last_processed_month(group_name, type):
-    directory = get_dir(group_name, type)
+    directory = get_dir(texts_root, group_name, type)
     # earliest = Month().get_next_month() # not calling get_nexT_month skips current month, resulting in downloadin only complete months
     earliest = Month()
 
@@ -269,7 +270,7 @@ def get_last_processed_month(group_name, type):
 
 
 def get_missing_months(group_name, type):
-    directory = get_dir(group_name, type)
+    directory = get_dir(texts_root, group_name, type)
     last = Month()
 
     if not os.path.exists(directory):
@@ -281,18 +282,17 @@ def get_missing_months(group_name, type):
     return list(reversed(sorted(missing_months)))
 
 
-def load_data_month(group_name, month, type):
-    directory = get_dir(group_name, type)
-    file_name = get_file(group_name, month, type)
+def load_data_month(texts_root, group_name, month, type):
+    file_name = get_file(texts_root, group_name, month, type)
 
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    if not os.path.exists(file_name):
+        raise Exception('No data for group {}, month {} and type {}'.format(group_name, month, type))
     with open(file_name, 'r', encoding='utf-8') as file:
         return json.load(file)
 
 
 def load_data(group_name, type):
-    directory = get_dir(group_name, type)
+    directory = get_dir(texts_root, group_name, type)
     if not os.path.exists(directory):
         raise Exception('No data for group {} and type {}'.format(group_name, type))
 
@@ -300,13 +300,28 @@ def load_data(group_name, type):
     for string in os.listdir(directory):
         month = Month.from_str(string.replace('.json', ''))
         data += load_data_month(group_name, month, type)
+
+    # combined = Parallel(n_jobs=workers)(delayed(load_data_month)
+    #                                     (texts_root, group_name, Month.from_str(string.replace('.json', '')), type)
+    #                                     for string in os.listdir(directory))
+    # data = list(chain.from_iterable(combined))
     return data
 
 
 def unify_data_group(group_name):
+    print("loading data for group {}".format(group_name))
+    start = time()
+
     posts = load_data(group_name, Type.POST)
     comments = load_data(group_name, Type.COMMENT)
     reactions = load_data(group_name, Type.REACTION)
+
+    end = time()
+    print("done loading data, going to process them, loaded {}, {}, {} posts, comments and reactions"
+          .format(len(posts), len(comments), len(reactions)))
+
+    print('time in usual for loop: ', end - start)
+
     posts = {post['id']: post for post in posts}
     comments = {comment['id']: comment for comment in comments}
     for id, post in posts.items():
@@ -324,6 +339,8 @@ def unify_data_group(group_name):
 
     for id, comment in comments.items():
         posts[comment['object']['id']]['comments'].append(comment)
+
+    print("processed, going to pickle them. Pickle RICK!!!!!!")
     return posts
 
 
@@ -361,3 +378,4 @@ graph = None
 objects_limit = None
 retries = None
 posts_limit = None
+workers = 10
