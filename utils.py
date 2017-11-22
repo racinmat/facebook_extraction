@@ -92,14 +92,24 @@ class Month:
         return hash(str(self))
 
 
-def download_posts_month(group_id, month, limits, retries):
+def download_posts_month(group_id, month, graph, limits, retries):
+    '''
+    :param group_id:
+    :param month:
+    :param facepy.GraphAPI graph:
+    :param limits:
+    :param retries:
+    :return:
+    '''
     since = month.get_since()
     until = month.get_until()
     fields = ['message', 'message_tags', 'created_time', 'updated_time', 'caption', 'description', 'story', 'from',
               'icon', 'properties', 'shares', 'link', 'name', 'object_id', 'parent_id', 'permalink_url', 'source',
               'status_type', 'target', 'type', 'to', 'with_tags', 'attachments'
               ]
-    data = graph.get(group_id + "/feed?fields=" + ','.join(fields), page=False, retry=retries, since=since, until=until,
+    # data = graph.get(group_id + "/feed?fields=" + ','.join(fields), page=False, retry=retries, since=since, until=until,
+    #                  limit=limits)
+    data = graph.get(group_id + "/feed", page=False, fields=fields, retry=retries, since=since, until=until,
                      limit=limits)
     posts = data['data']
     if len(posts) == limits:
@@ -196,7 +206,7 @@ def save_data_month(data, group_name, month, type):
 def download_group_posts(group_name, group_id):
     for month in get_missing_months(group_name, Type.POST):
         print("processing posts in month {}".format(month))
-        posts = download_posts_month(group_id, month, posts_limit, retries)
+        posts = download_posts_month(group_id, month, graph, posts_limit, retries)
         save_data_month(posts, group_name, month, Type.POST)
 
 
