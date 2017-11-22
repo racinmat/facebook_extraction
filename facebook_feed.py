@@ -10,9 +10,6 @@ import matplotlib.dates as mdates
 from dateutil.rrule import rrule, MONTHLY
 
 
-def fb_to_datetime(string):
-    return datetime.strptime(string, '%Y-%m-%dT%H:%M:%S%z')
-
 
 def load_posts():
     user = 'me'
