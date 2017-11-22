@@ -254,7 +254,6 @@ def get_file(group_name, month, type):
 
 
 def get_last_processed_month(group_name, type):
-    # todo: implement checking of missing months
     directory = get_dir(group_name, type)
     # earliest = Month().get_next_month() # not calling get_nexT_month skips current month, resulting in downloadin only complete months
     earliest = Month()

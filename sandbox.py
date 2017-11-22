@@ -17,10 +17,13 @@ def main():
     # posts = download_posts(group_id, since, until, utils.graph, 1000, retries=10)
     # with open('posts_test.json', 'w+', encoding='utf-8') as file:
     #     json.dump(posts, file)
-    with open('posts_test.json', 'r', encoding='utf-8') as file:
+    # with open('posts_test.json', 'r', encoding='utf-8') as file:
+    #     posts_all = json.load(file)
+    # print(len(posts_all))
+    # posts = download_posts(group_id, since, until, utils.graph, 100, retries=10)
+    with open('texts_test/{}/posts/2017-11.json'.format(group_name), 'r', encoding='utf-8') as file:
         posts_all = json.load(file)
     print(len(posts_all))
-    posts = download_posts(group_id, since, until, utils.graph, 100, retries=10)
 
 
 def download_posts(group_id, since, until, graph, limits, retries):
