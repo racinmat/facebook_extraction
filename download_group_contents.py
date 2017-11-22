@@ -8,7 +8,7 @@ from dateutil.relativedelta import relativedelta
 from facepy import GraphAPI
 from enum import Enum
 
-from progressbar import ProgressBar, Percentage, Bar
+from progressbar import ProgressBar, Percentage, Bar, FileTransferSpeed
 
 
 class Type(Enum):
@@ -83,7 +83,8 @@ def download_posts_month(group_id, month):
               'icon', 'properties', 'shares', 'link', 'name', 'object_id', 'parent_id', 'permalink_url', 'source',
               'status_type', 'target', 'type', 'to', 'with_tags'
               ]
-    data = graph.get(group_id + "/feed?fields=" + ','.join(fields), page=False, retry=5, since=since, until=until, limit=limit)
+    data = graph.get(group_id + "/feed?fields=" + ','.join(fields), page=False, retry=5, since=since, until=until,
+                     limit=limit)
     posts = data['data']
     if len(posts) == limit:
         print({'{} has limit posts, need to paginate'.format(month)})
@@ -96,10 +97,11 @@ def download_comments_month(group_name, month):
         posts = json.load(file)
     post_ids = [i['id'] for i in posts]
     comments = []
-    pbar = ProgressBar(widgets=[Percentage(), Bar()], maxval=len(post_ids)).start()
+    pbar = ProgressBar(widgets=widgets, maxval=len(post_ids)).start()
+    pbar.update_interval = len(post_ids)/20
     for i, post_id in enumerate(post_ids):
         comments += download_comments_for_post(post_id)
-        pbar.update(i+1)
+        pbar.update(i + 1)
     pbar.finish()
     # print(month, ': ', len(comments))
     return comments
@@ -114,10 +116,11 @@ def download_reactions_month(group_name, month):
     comment_ids = [i['id'] for i in comments]
     object_ids = post_ids + comment_ids
     reactions = []
-    pbar = ProgressBar(widgets=[Percentage(), Bar()], maxval=len(object_ids)).start()
+    pbar = ProgressBar(widgets=widgets, maxval=len(object_ids)).start()
+    pbar.update_interval = len(object_ids)/20
     for i, object_id in enumerate(object_ids):
         reactions += download_reactions_for_object(object_id)
-        pbar.update(i+1)
+        pbar.update(i + 1)
     pbar.finish()
     return reactions
 
@@ -226,6 +229,10 @@ if __name__ == '__main__':
     groups = {
         'scitani_ceskych_a_slovenskych_otaku': '135384786514720'
     }
+
+    widgets = [Percentage(), ' ',
+               Bar(marker='0', left='[', right=']'),
+               ' ', FileTransferSpeed(unit='f')]
 
     treshold = Month(year=2005, month=1)
 

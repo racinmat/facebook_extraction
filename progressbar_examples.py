@@ -4,7 +4,7 @@ import time
 from progressbar import AnimatedMarker, Bar, BouncingBar, Counter, ETA, \
     AdaptiveETA, FileTransferSpeed, FormatLabel, Percentage, \
     ProgressBar, ReverseBar, RotatingMarker, \
-    SimpleProgress, Timer
+    SimpleProgress, Timer, math
 
 examples = []
 def example(fn):
@@ -202,8 +202,81 @@ def example19():
     pass
   pbar.finish()
 
+
+@example
+def example_custom_1():
+    widgets = ['Test: ', Percentage(), ' ',
+               Bar(marker='0',left='[',right=']')]
+    pbar = ProgressBar(widgets=widgets, maxval=500)
+    pbar.start()
+    for i in range(100,500+1,50):
+        time.sleep(0.2)
+        pbar.update(i)
+    pbar.finish()
+
+
+@example
+def example_custom_2():
+    widgets = ['Test: ', Percentage(), ' ',
+               Bar(marker='0',left='[',right=']')]
+    pbar = ProgressBar(widgets=widgets, maxval=500)
+    pbar.start()
+    # for i in range(100,500+1,50):
+    rounding = -round(math.log(500, 10)) + 1
+    print(rounding)
+    for i in range(500):
+        time.sleep(0.01)
+        # print(round(i, -1))
+        pbar.update(round(i, rounding))
+    pbar.finish()
+
+
+@example
+def example_custom_3():
+    count = 1000
+    widgets = ['Test: ', Percentage(), ' ',
+               Bar(marker='0',left='[',right=']'),
+               ' ', FileTransferSpeed(unit='f')]
+    pbar = ProgressBar(widgets=widgets, maxval=count)
+    pbar.start()
+    # for i in range(100,500+1,50):
+    rounding = -round(math.log(count, 10)) + 1
+    print(rounding)
+    for i in range(count):
+        time.sleep(0.01)
+        # print(round(i, -1))
+        pbar.update(min(round(i, rounding), count))
+    pbar.finish()
+
+
+@example
+def example_custom_4():
+    count = 1000
+    widgets = ['Test: ', Percentage(), ' ',
+               Bar(marker='0',left='[',right=']'),
+               ' ', FileTransferSpeed(unit='f')]
+    pbar = ProgressBar(widgets=widgets, maxval=count, term_width=50)
+    pbar.start()
+    pbar.update_interval = count/20
+    # for i in range(100,500+1,50):
+    rounding = -round(math.log(count, 10)) + 1
+    for i in range(count):
+        time.sleep(0.01)
+        # print(round(i, -1))
+        # pbar.update(min(round(i, rounding), count))
+        pbar.update(i + 1)
+    pbar.finish()
+
+
 if __name__ == '__main__':
-    try:
-        for example in examples: example()
-    except KeyboardInterrupt:
-        sys.stdout.write('\nQuitting examples.\n')
+    # example0()
+    # example1()
+    # example4()
+    # example_custom_1()
+    # example_custom_2()
+    # example_custom_3()
+    example_custom_4()
+    # try:
+    #     for example in examples: example()
+    # except KeyboardInterrupt:
+    #     sys.stdout.write('\nQuitting examples.\n')
