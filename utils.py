@@ -296,10 +296,11 @@ def load_data(group_name, type):
     if not os.path.exists(directory):
         raise Exception('No data for group {} and type {}'.format(group_name, type))
 
+    # on goedel, this is 2x faster than parallel, what the fuck?
     data = []
     for string in os.listdir(directory):
         month = Month.from_str(string.replace('.json', ''))
-        data += load_data_month(group_name, month, type)
+        data += load_data_month(texts_root, group_name, month, type)
 
     # combined = Parallel(n_jobs=workers)(delayed(load_data_month)
     #                                     (texts_root, group_name, Month.from_str(string.replace('.json', '')), type)
@@ -338,7 +339,10 @@ def unify_data_group(group_name):
             comments[object_id]['reactions'].append(reaction)
 
     for id, comment in comments.items():
-        posts[comment['object']['id']]['comments'].append(comment)
+        parent_id = comment['object']['id']
+        if parent_id not in posts:
+            print("shit comment is missing")
+        posts[parent_id]['comments'].append(comment)
 
     print("processed, going to pickle them. Pickle RICK!!!!!!")
     return posts
