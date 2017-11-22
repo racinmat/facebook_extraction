@@ -37,7 +37,7 @@ if __name__ == '__main__':
 
     # utils.treshold = Month(year=2005, month=1)
     utils.treshold = Month(year=2017, month=11)
-    utils.posts_limit = 1500
+    utils.posts_limit = 100  # paginated, so 100 is limit per one page
     utils.objects_limit = 600
     utils.retries = 10
 
