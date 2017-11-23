@@ -351,7 +351,8 @@ def unify_data_group(group_name):
     for id, comment in comments.items():
         parent_id = comment['object']['id']
         if parent_id not in posts:
-            print("shit comment is missing")
+            print("shit, post with id {} is missing".format(parent_id))
+            continue
         posts[parent_id]['comments'].append(comment)
 
     print("processed, going to pickle them. Pickle RICK!!!!!!")
