@@ -309,6 +309,13 @@ def load_data(group_name, type):
     return data
 
 
+def strip_group_id(id):
+    # from composite ids e.g. 135384786514720_1006346316085225, strip group id
+    if '_' in id:
+        return id.split('_')[1]
+    return id
+
+
 def unify_data_group(group_name):
     print("loading data for group {}".format(group_name))
     start = time()
@@ -323,15 +330,18 @@ def unify_data_group(group_name):
 
     print('time in usual for loop: ', end - start)
 
-    posts = {post['id']: post for post in posts}
+    posts = {strip_group_id(post['id']): post for post in posts}
     comments = {comment['id']: comment for comment in comments}
     for id, post in posts.items():
+        post['id'] = strip_group_id(post['id'])
         post['comments'] = []
         post['reactions'] = []
     for id, comment in comments.items():
+        comment['object']['id'] = strip_group_id(comment['object']['id'])
         comment['reactions'] = []
 
     for reaction in reactions:
+        reaction['object_id'] = strip_group_id(reaction['object_id'])
         object_id = reaction['object_id']
         if object_id in posts:
             posts[object_id]['reactions'].append(reaction)
