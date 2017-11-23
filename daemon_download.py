@@ -15,7 +15,7 @@ def download():
 
 def is_limit_reached():
     try:
-        utils.graph.get('/me')
+        utils.graph.get('/me', retry=1)
         return False
     except OAuthError as e:
         return True
@@ -26,9 +26,10 @@ def main():
         try:
             download()
         except OAuthError as e:
-            print("Shit happened")
+            print("Limit reached")
             print(e)
             while is_limit_reached():
+                print("Limit is reached, waiting")
                 time.sleep(60) # one minute waiting
 
 #
