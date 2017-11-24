@@ -30,7 +30,9 @@ def main():
             print(e)
             while is_limit_reached():
                 print("Limit is reached, waiting")
-                time.sleep(60) # one minute waiting
+                time.sleep(600) # one minute waiting
+            print("wait ended")
+
 
 #
 # def performance_tests():
