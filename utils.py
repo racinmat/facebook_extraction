@@ -6,6 +6,8 @@ from itertools import chain
 import pickle
 from dateutil.relativedelta import relativedelta
 from enum import Enum
+
+from facepy import FacebookError
 from joblib import Parallel, delayed
 from time import time
 
@@ -157,8 +159,9 @@ def download_reactions_month(group_name, month):
         comments = json.load(file)
     comment_ids = [i['id'] for i in comments]
     object_ids = post_ids + comment_ids
-    # return download_reactions_usual(object_ids)
-    return download_reactions_parallel(object_ids)
+    return download_reactions_usual(object_ids)
+    # since there is so much reactions, parallel mode is not needed
+    # return download_reactions_parallel(object_ids)
 
 
 def download_reactions_usual(object_ids):
@@ -193,12 +196,18 @@ def download_reactions_for_object(object_id, graph, limits, retries):
 
     # fields = ['id', 'name', 'type', 'profile_type']
     fields = ['id', 'name', 'type']
-    data = graph.get(object_id + "/reactions", page=False, retry=retries, fields=fields, limit=limits)
-    reactions = data['data']
-    for reaction in reactions:
-        reaction['object_id'] = object_id
+    try:
+        data = graph.get(object_id + "/reactions", page=False, retry=retries, fields=fields, limit=limits)
+        reactions = data['data']
+        for reaction in reactions:
+            reaction['object_id'] = object_id
+            return reactions
+    except FacebookError as e:
+        if 'does not exist' in e.message:
+            with open('errors.txt', 'a+') as f:
+                f.write('Post {} does not exist.\n'.format(object_id))
     # print(object_id, ': ', len(reactions))
-    return reactions
+    return []
 
 
 def save_data_month(data, group_name, month, type):
