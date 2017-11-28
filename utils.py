@@ -206,6 +206,8 @@ def download_reactions_for_object(object_id, graph, limits, retries):
         if 'does not exist' in e.message:
             with open('errors.txt', 'a+') as f:
                 f.write('Post {} does not exist.\n'.format(object_id))
+        else:
+            raise e
     # print(object_id, ': ', len(reactions))
     return []
 
