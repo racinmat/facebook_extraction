@@ -201,7 +201,7 @@ def download_reactions_for_object(object_id, graph, limits, retries):
         reactions = data['data']
         for reaction in reactions:
             reaction['object_id'] = object_id
-            return reactions
+        return reactions
     except FacebookError as e:
         if 'does not exist' in e.message:
             with open('errors.txt', 'a+') as f:
