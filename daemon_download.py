@@ -3,7 +3,7 @@ import json
 import time
 from facepy import GraphAPI, OAuthError
 import utils
-from utils import download_group_posts, download_group_comments, download_group_reactions, Month
+from utils import download_group_posts, download_group_comments, download_group_reactions, Month, is_limit_reached
 
 
 def download():
@@ -11,14 +11,6 @@ def download():
         download_group_posts(group_name, group_id)
         download_group_comments(group_name)
         download_group_reactions(group_name)
-
-
-def is_limit_reached():
-    try:
-        utils.graph.get('/me', retry=1)
-        return False
-    except OAuthError as e:
-        return True
 
 
 def main():

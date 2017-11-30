@@ -2,14 +2,38 @@ import json
 from datetime import datetime
 import os
 from itertools import chain
-
 import pickle
 from dateutil.relativedelta import relativedelta
 from enum import Enum
-
 from facepy import FacebookError
 from joblib import Parallel, delayed
-from time import time
+import time
+from facepy import OAuthError
+
+
+def is_limit_reached():
+    try:
+        graph.get('/me', retry=1)
+        return False
+    except OAuthError as e:
+        return True
+
+
+def wait_if_limit_reached(funct):
+    def try_and_wait(*args, **kw):
+        while True:
+            try:
+                result = funct(*args, **kw)
+                return result
+            except OAuthError as e:
+                print("Limit reached")
+                print(e)
+                while is_limit_reached():
+                    print("Limit is reached, waiting")
+                    time.sleep(600)  # one minute waiting
+                print("wait ended, trying if can query API")
+
+    return try_and_wait
 
 
 class Type(Enum):
@@ -95,6 +119,7 @@ class Month:
         return hash(str(self))
 
 
+@wait_if_limit_reached
 def download_posts_month(group_id, month, graph, limits, retries):
     '''
     :param group_id:
@@ -126,6 +151,39 @@ def download_posts_month(group_id, month, graph, limits, retries):
 
     print(month, ': ', len(posts))
     return posts
+
+
+@wait_if_limit_reached
+def download_comments_for_post(post_id, graph, limits, retries):
+    fields = ['message', 'created_time', 'from', 'id', 'attachment', 'object', 'parent', 'message_tags']
+    data = graph.get(post_id + "/comments", page=False,
+                     retry=retries, limit=limits, summary=1, filter='stream', fields=fields)
+    comments = data['data']
+    # print(post_id, ': ', len(comments))
+    return comments
+
+
+@wait_if_limit_reached
+def download_reactions_for_object(object_id, graph, limits, retries):
+    if graph is None:
+        raise Exception('Forgot to initialize graph')
+
+    # fields = ['id', 'name', 'type', 'profile_type']
+    fields = ['id', 'name', 'type']
+    try:
+        data = graph.get(object_id + "/reactions", page=False, retry=retries, fields=fields, limit=limits)
+        reactions = data['data']
+        for reaction in reactions:
+            reaction['object_id'] = object_id
+        return reactions
+    except FacebookError as e:
+        if 'does not exist' in e.message:
+            with open('errors.txt', 'a+') as f:
+                f.write('Post {} does not exist.\n'.format(object_id))
+        else:
+            raise e
+    # print(object_id, ': ', len(reactions))
+    return []
 
 
 def download_comments_month(group_name, month):
@@ -177,39 +235,8 @@ def download_reactions_parallel(object_ids):
     return reactions
 
 
-def download_comments_for_post(post_id, graph, limits, retries):
-    fields = ['message', 'created_time', 'from', 'id', 'attachment', 'object', 'parent', 'message_tags']
-    data = graph.get(post_id + "/comments", page=False,
-                     retry=retries, limit=limits, summary=1, filter='stream', fields=fields)
-    comments = data['data']
-    # print(post_id, ': ', len(comments))
-    return comments
-
-
 def fb_to_datetime(string):
     return datetime.strptime(string, '%Y-%m-%dT%H:%M:%S%z')
-
-
-def download_reactions_for_object(object_id, graph, limits, retries):
-    if graph is None:
-        raise Exception('Forgot to initialize graph')
-
-    # fields = ['id', 'name', 'type', 'profile_type']
-    fields = ['id', 'name', 'type']
-    try:
-        data = graph.get(object_id + "/reactions", page=False, retry=retries, fields=fields, limit=limits)
-        reactions = data['data']
-        for reaction in reactions:
-            reaction['object_id'] = object_id
-        return reactions
-    except FacebookError as e:
-        if 'does not exist' in e.message:
-            with open('errors.txt', 'a+') as f:
-                f.write('Post {} does not exist.\n'.format(object_id))
-        else:
-            raise e
-    # print(object_id, ': ', len(reactions))
-    return []
 
 
 def save_data_month(data, group_name, month, type):
@@ -329,13 +356,13 @@ def strip_group_id(id):
 
 def unify_data_group(group_name):
     print("loading data for group {}".format(group_name))
-    start = time()
+    start = time.time()
 
     posts = load_data(group_name, Type.POST)
     comments = load_data(group_name, Type.COMMENT)
     reactions = load_data(group_name, Type.REACTION)
 
-    end = time()
+    end = time.time()
     print("done loading data, going to process them, loaded {}, {}, {} posts, comments and reactions"
           .format(len(posts), len(comments), len(reactions)))
 
