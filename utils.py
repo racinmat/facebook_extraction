@@ -26,7 +26,7 @@ def wait_if_limit_reached(funct):
                 result = funct(*args, **kw)
                 return result
             except OAuthError as e:
-                print("Limit reached")
+                print("Limit reached while calling {}".format(funct.__name__))
                 print(e)
                 while is_limit_reached():
                     print("Limit is reached, waiting")
