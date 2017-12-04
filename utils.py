@@ -311,8 +311,8 @@ def get_last_processed_month(group_name, type):
 
 def get_missing_months(group_name, type):
     directory = get_dir(texts_root, group_name, type)
-    # last = Month()
-    last = Month(2013, 12)
+    last = Month()
+    # last = Month(2013, 12)
 
     if not os.path.exists(directory):
         os.makedirs(directory)

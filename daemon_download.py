@@ -51,7 +51,8 @@ if __name__ == '__main__':
 
     utils.texts_root = 'texts'
 
-    utils.treshold = Month(year=2013, month=1)
+    utils.treshold = Month(year=2008, month=1)
+    # utils.treshold = Month(year=2013, month=1)
     # utils.treshold = Month(year=2017, month=11)
     utils.posts_limit = 100  # paginated, so 100 is limit per one page
     utils.objects_limit = 600
