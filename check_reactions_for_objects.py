@@ -6,7 +6,7 @@ def main():
     group_name = list(groups.keys())[0]
     print("loading data for group {}".format(group_name))
 
-    month = Month(2017, 5)
+    month = Month(2017, 6)
     posts = load_data_month(utils.texts_root, group_name, month, Type.POST)
     comments = load_data_month(utils.texts_root, group_name, month, Type.COMMENT)
     reactions = load_data_month(utils.texts_root, group_name, month, Type.REACTION)

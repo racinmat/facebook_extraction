@@ -9,6 +9,8 @@ from facepy import FacebookError
 from joblib import Parallel, delayed
 import time
 from facepy import OAuthError
+import logging
+import sys
 
 
 def is_limit_reached():
@@ -26,12 +28,12 @@ def wait_if_limit_reached(funct):
                 result = funct(*args, **kw)
                 return result
             except OAuthError as e:
-                print("Limit reached while calling {}".format(funct.__name__))
-                print(e)
+                logger.info("Limit reached while calling {}".format(funct.__name__))
+                logger.info(e)
                 while is_limit_reached():
-                    print("Limit is reached, waiting")
+                    logger.info("Limit is reached, waiting")
                     time.sleep(600)  # one minute waiting
-                print("wait ended, trying if can query API")
+                logger.info("wait ended, trying if can query API")
 
     return try_and_wait
 
@@ -141,15 +143,15 @@ def download_posts_month(group_id, month, graph, limits, retries):
     #                  limit=limits)
     # posts = data['data']
     # if len(posts) == limits:
-    #     print({'{} has limit posts, need to paginate'.format(month)})
+    #     logger.info({'{} has limit posts, need to paginate'.format(month)})
     pages = graph.get(group_id + "/feed", page=True, fields=fields, retry=retries, since=since, until=until,
                       limit=limits)
     posts = []
     for page in pages:
-        # print("page len: {}".format(len(page['data'])))
+        # logger.info("page len: {}".format(len(page['data'])))
         posts += page['data']
 
-    print(month, ': ', len(posts))
+    logger.info(month, ': ', len(posts))
     return posts
 
 
@@ -159,7 +161,7 @@ def download_comments_for_post(post_id, graph, limits, retries):
     data = graph.get(post_id + "/comments", page=False,
                      retry=retries, limit=limits, summary=1, filter='stream', fields=fields)
     comments = data['data']
-    # print(post_id, ': ', len(comments))
+    # logger.info(post_id, ': ', len(comments))
     return comments
 
 
@@ -182,7 +184,7 @@ def download_reactions_for_object(object_id, graph, limits, retries):
                 f.write('Post {} does not exist.\n'.format(object_id))
         else:
             raise e
-    # print(object_id, ': ', len(reactions))
+    # logger.info(object_id, ': ', len(reactions))
     return []
 
 
@@ -197,7 +199,7 @@ def download_comments_month(group_name, month):
 def download_comments_usual(post_ids):
     combined = [download_comments_for_post(post_id, graph, objects_limit, retries) for post_id in post_ids]
     comments = list(chain.from_iterable(combined))
-    # print(month, ': ', len(comments))
+    # logger.info(month, ': ', len(comments))
     return comments
 
 
@@ -205,7 +207,7 @@ def download_comments_parallel(post_ids):
     combined = Parallel(n_jobs=workers)(delayed(download_comments_for_post)
                                         (post_id, graph, objects_limit, retries) for post_id in post_ids)
     comments = list(chain.from_iterable(combined))
-    # print(month, ': ', len(comments))
+    # logger.info(month, ': ', len(comments))
     return comments
 
 
@@ -251,7 +253,7 @@ def save_data_month(data, group_name, month, type):
 
 def download_group_posts(group_name, group_id):
     for month in get_missing_months(group_name, Type.POST):
-        print("processing posts in month {}".format(month))
+        logger.info("processing posts in month {}".format(month))
         posts = download_posts_month(group_id, month, graph, posts_limit, retries)
         save_data_month(posts, group_name, month, Type.POST)
 
@@ -261,7 +263,7 @@ def download_group_comments(group_name):
         raise Exception('Forgot to initialize treshold')
 
     for month in get_missing_months(group_name, Type.COMMENT):
-        print("processing comments in month {}".format(month))
+        logger.info("processing comments in month {}".format(month))
         comments = download_comments_month(group_name, month)
         save_data_month(comments, group_name, month, Type.COMMENT)
 
@@ -271,7 +273,7 @@ def download_group_reactions(group_name):
         raise Exception('Forgot to initialize treshold')
 
     for month in get_missing_months(group_name, Type.REACTION):
-        print("processing reactions in month {}".format(month))
+        logger.info("processing reactions in month {}".format(month))
         reactions = download_reactions_month(group_name, month)
         save_data_month(reactions, group_name, month, Type.REACTION)
 
@@ -309,7 +311,8 @@ def get_last_processed_month(group_name, type):
 
 def get_missing_months(group_name, type):
     directory = get_dir(texts_root, group_name, type)
-    last = Month()
+    # last = Month()
+    last = Month(2013, 12)
 
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -355,7 +358,7 @@ def strip_group_id(id):
 
 
 def unify_data_group(group_name):
-    print("loading data for group {}".format(group_name))
+    logger.info("loading data for group {}".format(group_name))
     start = time.time()
 
     posts = load_data(group_name, Type.POST)
@@ -363,10 +366,10 @@ def unify_data_group(group_name):
     reactions = load_data(group_name, Type.REACTION)
 
     end = time.time()
-    print("done loading data, going to process them, loaded {}, {}, {} posts, comments and reactions"
+    logger.info("done loading data, going to process them, loaded {}, {}, {} posts, comments and reactions"
           .format(len(posts), len(comments), len(reactions)))
 
-    print('time in usual for loop: ', end - start)
+    logger.info('time in usual for loop: ', end - start)
 
     posts = {strip_group_id(post['id']): post for post in posts}
     comments = {comment['id']: comment for comment in comments}
@@ -389,11 +392,11 @@ def unify_data_group(group_name):
     for id, comment in comments.items():
         parent_id = comment['object']['id']
         if parent_id not in posts:
-            print("shit, post with id {} is missing".format(parent_id))
+            logger.info("shit, post with id {} is missing".format(parent_id))
             continue
         posts[parent_id]['comments'].append(comment)
 
-    print("processed, going to pickle them. Pickle RICK!!!!!!")
+    logger.info("processed, going to pickle them. Pickle RICK!!!!!!")
     return posts
 
 
@@ -432,3 +435,10 @@ objects_limit = None
 retries = None
 posts_limit = None
 workers = 10
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+ch = logging.StreamHandler(sys.stdout)
+ch.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(message)s')
+ch.setFormatter(formatter)
+logger.addHandler(ch)

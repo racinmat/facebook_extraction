@@ -45,12 +45,13 @@ if __name__ == '__main__':
         access_token = credentials['extended_access_token']
 
     groups = {
-        'scitani_ceskych_a_slovenskych_otaku': '135384786514720'
+        # 'scitani_ceskych_a_slovenskych_otaku': '135384786514720',
+        'test_matrika': '465119610230277',
     }
 
     utils.texts_root = 'texts'
 
-    utils.treshold = Month(year=2008, month=1)
+    utils.treshold = Month(year=2013, month=1)
     # utils.treshold = Month(year=2017, month=11)
     utils.posts_limit = 100  # paginated, so 100 is limit per one page
     utils.objects_limit = 600
