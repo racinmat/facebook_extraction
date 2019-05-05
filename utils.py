@@ -5,7 +5,7 @@ from itertools import chain
 import pickle
 from dateutil.relativedelta import relativedelta
 from enum import Enum
-from facepy import FacebookError
+from facepy import FacebookError, GraphAPI
 from joblib import Parallel, delayed
 import time
 from facepy import OAuthError
@@ -96,6 +96,9 @@ class Month:
         months.add(end)
         return months
 
+    def __repr__(self) -> str:
+        return self.__str__()
+
     def __str__(self):
         return "{}-{}".format(self.year, self.month)
 
@@ -151,7 +154,7 @@ def download_posts_month(group_id, month, graph, limits, retries):
         # logger.info("page len: {}".format(len(page['data'])))
         posts += page['data']
 
-    logger.info(month, ': ', len(posts))
+    logger.info(f'{month}: {len(posts)}')
     return posts
 
 
@@ -161,7 +164,7 @@ def download_comments_for_post(post_id, graph, limits, retries):
     data = graph.get(post_id + "/comments", page=False,
                      retry=retries, limit=limits, summary=1, filter='stream', fields=fields)
     comments = data['data']
-    # logger.info(post_id, ': ', len(comments))
+    # logger.info(f'{post_id}: {len(comments)}')
     return comments
 
 
@@ -278,29 +281,28 @@ def download_group_reactions(group_name):
         save_data_month(reactions, group_name, month, Type.REACTION)
 
 
-def get_dir(texts_root, group_name, type):
-    if type == Type.POST:
+def get_dir(texts_root, group_name, content_type):
+    if content_type == Type.POST:
         directory = os.path.join(texts_root, group_name, 'posts')
-    elif type == Type.COMMENT:
+    elif content_type == Type.COMMENT:
         directory = os.path.join(texts_root, group_name, 'comments')
-    elif type == Type.REACTION:
+    elif content_type == Type.REACTION:
         directory = os.path.join(texts_root, group_name, 'reactions')
     else:
         raise Exception('unknown type')
     return directory
 
 
-def get_file(texts_root, group_name, month, type):
-    return os.path.join(get_dir(texts_root, group_name, type), '{}.json'.format(month))
+def get_file(texts_root, group_name, month, content_type):
+    return os.path.join(get_dir(texts_root, group_name, content_type), '{}.json'.format(month))
 
 
-def get_last_processed_month(group_name, type):
-    directory = get_dir(texts_root, group_name, type)
-    # earliest = Month().get_next_month() # not calling get_nexT_month skips current month, resulting in downloadin only complete months
+def get_last_processed_month(group_name, content_type):
+    directory = get_dir(texts_root, group_name, content_type)
+    # earliest = Month().get_next_month() # not calling get_next_month skips current month, resulting in downloadin only complete months
     earliest = Month()
 
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    os.makedirs(directory, exist_ok=True)
 
     for string in os.listdir(directory):
         month = Month.from_str(string.replace('.json', ''))
@@ -309,13 +311,12 @@ def get_last_processed_month(group_name, type):
     return earliest
 
 
-def get_missing_months(group_name, type):
-    directory = get_dir(texts_root, group_name, type)
+def get_missing_months(group_name, content_type):
+    directory = get_dir(texts_root, group_name, content_type)
     last = Month()
     # last = Month(2013, 12)
 
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    os.makedirs(directory, exist_ok=True)
 
     existing_months = set([Month.from_str(s.replace('.json', '')) for s in os.listdir(directory)])
     all_months = Month.between(treshold, last)
@@ -323,11 +324,11 @@ def get_missing_months(group_name, type):
     return list(reversed(sorted(missing_months)))
 
 
-def load_data_month(texts_root, group_name, month, type):
-    file_name = get_file(texts_root, group_name, month, type)
+def load_data_month(texts_root, group_name, month, content_type):
+    file_name = get_file(texts_root, group_name, month, content_type)
 
     if not os.path.exists(file_name):
-        raise Exception('No data for group {}, month {} and type {}'.format(group_name, month, type))
+        raise Exception('No data for group {}, month {} and type {}'.format(group_name, month, content_type))
     with open(file_name, 'r', encoding='utf-8') as file:
         return json.load(file)
 
@@ -429,8 +430,8 @@ def load_binary_data(group_name):
 
 
 texts_root = None
-treshold = None
-graph = None
+treshold = Month(year=2008, month=1)
+graph = None    # type: GraphAPI
 objects_limit = None
 retries = None
 posts_limit = None

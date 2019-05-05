@@ -22,7 +22,7 @@ def main():
             print(e)
             while is_limit_reached():
                 print("Limit is reached, waiting")
-                time.sleep(600) # one minute waiting
+                time.sleep(60 * 10)  # 10 minutes waiting
             print("wait ended")
 
 
@@ -45,8 +45,8 @@ if __name__ == '__main__':
         access_token = credentials['extended_access_token']
 
     groups = {
-        # 'scitani_ceskych_a_slovenskych_otaku': '135384786514720',
-        'test_matrika': '465119610230277',
+        'scitani_ceskych_a_slovenskych_otaku': '135384786514720',
+        # 'test_matrika': '465119610230277',
     }
 
     utils.texts_root = 'texts'

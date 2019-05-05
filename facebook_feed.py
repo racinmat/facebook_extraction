@@ -17,8 +17,8 @@ def load_posts():
     graph = facebook.GraphAPI(access_token)
     # profile = graph.get_object(user)
     # posts = graph.get_connections(profile['id'], 'posts')
-    # posts = graph.get_connections('135384786514720', 'feed')    # sčítání
-    posts = graph.get_connections('295897323905870', 'feed')    # otaku seznamka
+    posts = graph.get_connections('135384786514720', 'feed')    # sčítání
+    # posts = graph.get_connections('295897323905870', 'feed')    # otaku seznamka
 
     all_posts = []
     limit = 10000

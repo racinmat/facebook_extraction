@@ -28,7 +28,7 @@ if __name__ == '__main__':
     with open('credentials.json') as config_file:
         credentials = json.load(config_file)
         access_token = credentials['extended_access_token']
-
+    # EAACFWZCthTCYBAIU892oJfNnZCgObYZCGIVB0IoMgWtxItUsZBtsjZBsaZCbzElhMQ04MUqVDgPp6aaGsrZAMDRnYKaZAf3wWRooNBi3XepTCjczepCi6rvg1s6m7ZAU32TEVXTCrTPEFw6iyf7KrNZCiIIyyd7THZC8lCaiBtOQ26aAYmhxKUDEK7DJwV2JI2ZAdApXRlPJ68gZA4RMCZCuzgSkA4
     groups = {
         'scitani_ceskych_a_slovenskych_otaku': '135384786514720'
     }

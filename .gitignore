@@ -108,3 +108,4 @@ venv.bak/
 /access_token.txt
 /texts/
 /credentials.json
+/credentials_old.json
