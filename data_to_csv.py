@@ -16,7 +16,8 @@ def json_posts_to_pandas(group_name, json_file):
         # some data preliminary cleaning
         # I don't care about commerce products
         if 'attachments' in post:
-            post['attachments']['data'] = [i for i in post['attachments']['data'] if i['type'] != 'commerce_product_mini_list']
+            post['attachments']['data'] = [i for i in post['attachments']['data'] if
+                                           i['type'] != 'commerce_product_mini_list']
         try:
             # should be only 1 attachment
             attachment = post['attachments']['data'][0] if 'attachments' in post else None
@@ -30,7 +31,6 @@ def json_posts_to_pandas(group_name, json_file):
                 'created_time': post['created_time'],
                 'updated_time': post['updated_time'],
                 'message': post.get('message', None),
-                # 'attachment_type': post['attachments']['data'][0]['type'] if 'attachments' in post else None,
                 'attachment_type': attachment.get('type', None) if attachment is not None else None,
                 'attachment_title': attachment.get('title', None) if attachment is not None else None,
                 'attachment_url': attachment.get('url', None) if attachment is not None else None,
@@ -47,9 +47,19 @@ def json_posts_to_pandas(group_name, json_file):
     # df.to_csv(json_file + '.csv')
 
 
-def posts_to_pandas(group_name):
+def data_to_pandas(group_name):
     directory = utils.get_dir(utils.texts_root, group_name, utils.Type.POST)
+    existing_months = sorted(set([utils.Month.from_str(s.replace('.json', '')) for s in os.listdir(directory)]))
+    for month in existing_months:
+        json_posts_to_pandas(group_name, osp.join(directory, f'{month}.json'))
 
+    # todo: implement the rest
+    directory = utils.get_dir(utils.texts_root, group_name, utils.Type.COMMENT)
+    existing_months = sorted(set([utils.Month.from_str(s.replace('.json', '')) for s in os.listdir(directory)]))
+    for month in existing_months:
+        json_posts_to_pandas(group_name, osp.join(directory, f'{month}.json'))
+
+    directory = utils.get_dir(utils.texts_root, group_name, utils.Type.REACTION)
     existing_months = sorted(set([utils.Month.from_str(s.replace('.json', '')) for s in os.listdir(directory)]))
     for month in existing_months:
         json_posts_to_pandas(group_name, osp.join(directory, f'{month}.json'))
@@ -57,7 +67,7 @@ def posts_to_pandas(group_name):
 
 def main():
     for group_name, group_id in groups.items():
-        posts_to_pandas(group_name)
+        data_to_pandas(group_name)
 
 
 if __name__ == '__main__':

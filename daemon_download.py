@@ -8,7 +8,7 @@ from utils import download_group_posts, download_group_comments, download_group_
 
 def download():
     for group_name, group_id in groups.items():
-        download_group_posts(group_name, group_id)
+        # download_group_posts(group_name, group_id)    # todo: uncomment
         download_group_comments(group_name)
         download_group_reactions(group_name)
 

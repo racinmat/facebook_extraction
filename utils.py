@@ -207,8 +207,8 @@ def download_comments_usual(post_ids):
 
 
 def download_comments_parallel(post_ids):
-    combined = Parallel(n_jobs=workers)(delayed(download_comments_for_post)
-                                        (post_id, graph, objects_limit, retries) for post_id in post_ids)
+    combined = Parallel(n_jobs=workers, prefer='threads')(
+        delayed(download_comments_for_post)(post_id, graph, objects_limit, retries) for post_id in post_ids)
     comments = list(chain.from_iterable(combined))
     # logger.info(month, ': ', len(comments))
     return comments
@@ -234,8 +234,8 @@ def download_reactions_usual(object_ids):
 
 
 def download_reactions_parallel(object_ids):
-    combined = Parallel(n_jobs=workers)(delayed(download_reactions_for_object)
-                                        (object_id, graph, objects_limit, retries) for object_id in object_ids)
+    combined = Parallel(n_jobs=workers, prefer='threads')(
+        delayed(download_reactions_for_object)(object_id, graph, objects_limit, retries) for object_id in object_ids)
     reactions = list(chain.from_iterable(combined))
     return reactions
 
@@ -248,8 +248,7 @@ def save_data_month(data, group_name, month, type):
     directory = get_dir(texts_root, group_name, type)
     file_name = get_file(texts_root, group_name, month, type)
 
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+    os.makedirs(directory, exist_ok=True)
     with open(file_name, 'w+', encoding='utf-8') as file:
         json.dump(data, file)
 
@@ -368,7 +367,7 @@ def unify_data_group(group_name):
 
     end = time.time()
     logger.info("done loading data, going to process them, loaded {}, {}, {} posts, comments and reactions"
-          .format(len(posts), len(comments), len(reactions)))
+                .format(len(posts), len(comments), len(reactions)))
 
     logger.info('time in usual for loop: ', end - start)
 
@@ -431,7 +430,7 @@ def load_binary_data(group_name):
 
 texts_root = None
 treshold = Month(year=2008, month=1)
-graph = None    # type: GraphAPI
+graph = None  # type: GraphAPI
 objects_limit = None
 retries = None
 posts_limit = None
