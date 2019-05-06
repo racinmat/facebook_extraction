@@ -58,7 +58,7 @@ if __name__ == '__main__':
     utils.objects_limit = 600
     utils.retries = 10
 
-    utils.graph = GraphAPI(access_token)
+    utils.graph = GraphAPI(access_token, version='2.11')
     main()
     # performance_tests()
     print("Everything downloaded to month {}".format(utils.treshold))
