@@ -429,12 +429,13 @@ def load_binary_data(group_name):
 
 
 texts_root = None
-treshold = Month(year=2008, month=1)
+treshold = Month(year=2010, month=12)   # group started in 2011
 graph = None  # type: GraphAPI
 objects_limit = None
 retries = None
 posts_limit = None
-workers = 10
+# workers = 10
+workers = 4  # more workers make messy logs, and due to limits, 4 is enough
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler(sys.stdout)
