@@ -21,21 +21,40 @@ def json_posts_to_pandas(json_file):
         try:
             # should be only 1 attachment
             attachment = post['attachments']['data'][0] if 'attachments' in post else None
-            flat_post = {
-                'id': post['id'],
-                'from_id': post['from']['id'],
-                'from_name': post['from']['name'],
-                'object_id': post.get('object_id', None),
-                'status_type': post.get('status_type', None),  # getter with defaulting if key is not present
-                'type': post['type'],
-                'created_time': post['created_time'],
-                'updated_time': post['updated_time'],
-                'message': post.get('message', None),
-                'attachment_type': attachment.get('type', None) if attachment is not None else None,
-                'attachment_title': attachment.get('title', None) if attachment is not None else None,
-                'attachment_url': attachment.get('url', None) if attachment is not None else None,
-                'shares_count': post['shares']['count'] if 'shares' in post else 0,
-            }
+            if 'from' in post:
+                # for old posts, which have from
+                flat_post = {
+                    'id': post['id'],
+                    'from_id': post['from']['id'],
+                    'from_name': post['from']['name'],
+                    'object_id': post.get('object_id', None),
+                    'status_type': post.get('status_type', None),  # getter with defaulting if key is not present
+                    'type': post['type'],
+                    'created_time': post['created_time'],
+                    'updated_time': post['updated_time'],
+                    'message': post.get('message', None),
+                    'attachment_type': attachment.get('type', None) if attachment is not None else None,
+                    'attachment_title': attachment.get('title', None) if attachment is not None else None,
+                    'attachment_url': attachment.get('url', None) if attachment is not None else None,
+                    'shares_count': post['shares']['count'] if 'shares' in post else 0,
+                }
+            else:
+                # for new posts, which don't have from
+                flat_post = {
+                    'id': post['id'],
+                    'from_id': None,
+                    'from_name': None,
+                    'object_id': post.get('object_id', None),
+                    'status_type': post.get('status_type', None),  # getter with defaulting if key is not present
+                    'type': post['type'],
+                    'created_time': post['created_time'],
+                    'updated_time': post['updated_time'],
+                    'message': post.get('message', None),
+                    'attachment_type': attachment.get('type', None) if attachment is not None else None,
+                    'attachment_title': attachment.get('title', None) if attachment is not None else None,
+                    'attachment_url': attachment.get('url', None) if attachment is not None else None,
+                    'shares_count': post['shares']['count'] if 'shares' in post else 0,
+                }
             if 'attachments' in post and len(post['attachments']['data']) > 1:
                 # print('much attachments')
                 raise Exception('much attachments')
@@ -57,18 +76,32 @@ def json_comments_to_pandas(json_file):
         # some data preliminary cleaning
         # I don't care about commerce products
         try:
-            flat_comment = {
-                'id': comment['id'],
-                'message': comment['message'],
-                'from_id': comment['from']['id'],
-                'from_name': comment['from']['name'],
-                'created_time': comment['created_time'],
-                'parent_id': comment['parent']['id'] if 'parent' in comment else None,
-                'object_id': comment['object']['id'],
-            }
+            if 'from' in comment:
+                # for old posts, which have from
+                flat_comment = {
+                    'id': comment['id'],
+                    'message': comment['message'],
+                    'from_id': comment['from']['id'],
+                    'from_name': comment['from']['name'],
+                    'created_time': comment['created_time'],
+                    'parent_id': comment['parent']['id'] if 'parent' in comment else None,
+                    'object_id': comment['object']['id'],
+                }
+            else:
+                # for new posts, which don't have from
+                flat_comment = {
+                    'id': comment['id'],
+                    'message': comment['message'],
+                    'from_id': None,
+                    'from_name': None,
+                    'created_time': comment['created_time'],
+                    'parent_id': comment['parent']['id'] if 'parent' in comment else None,
+                    'object_id': comment['object']['id'],
+                }
             flat_comments.append(flat_comment)
         except KeyError as e:
             print('hi')
+            print(e)
 
     df = pd.DataFrame(flat_comments)
     return df
@@ -95,6 +128,7 @@ def json_reactions_to_pandas(json_file):
             flat_reactions.append(flat_reaction)
         except KeyError as e:
             print('hi')
+            print(e)
 
     df = pd.DataFrame(flat_reactions)
     return df
@@ -112,11 +146,11 @@ def data_to_pandas(group_name):
     for month in existing_months:
         df = json_comments_to_pandas(osp.join(directory, f'{month}.json'))
 
-    # todo: implement the rest
-    directory = utils.get_dir(utils.texts_root, group_name, utils.Type.REACTION)
-    existing_months = sorted(set([utils.Month.from_str(s.replace('.json', '')) for s in os.listdir(directory)]))
-    for month in existing_months:
-        df = json_reactions_to_pandas(osp.join(directory, f'{month}.json'))
+    # # todo: implement the rest
+    # directory = utils.get_dir(utils.texts_root, group_name, utils.Type.REACTION)
+    # existing_months = sorted(set([utils.Month.from_str(s.replace('.json', '')) for s in os.listdir(directory)]))
+    # for month in existing_months:
+    #     df = json_reactions_to_pandas(osp.join(directory, f'{month}.json'))
 
 
 def main():

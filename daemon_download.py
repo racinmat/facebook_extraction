@@ -10,7 +10,7 @@ def download():
     for group_name, group_id in groups.items():
         # download_group_posts(group_name, group_id)    # todo: uncomment
         download_group_comments(group_name)
-        download_group_reactions(group_name)
+        # download_group_reactions(group_name)
 
 
 def main():
@@ -51,9 +51,9 @@ if __name__ == '__main__':
 
     utils.texts_root = 'texts'
 
-    utils.treshold = Month(year=2008, month=1)
+    # utils.treshold = Month(year=2008, month=1)
     # utils.treshold = Month(year=2013, month=1)
-    # utils.treshold = Month(year=2017, month=11)
+    utils.treshold = Month(year=2017, month=10)
     utils.posts_limit = 100  # paginated, so 100 is limit per one page
     utils.objects_limit = 600
     utils.retries = 10
