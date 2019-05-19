@@ -161,11 +161,19 @@ def download_posts_month(group_id, month, graph, limits, retries):
 @wait_if_limit_reached
 def download_comments_for_post(post_id, graph, limits, retries):
     fields = ['message', 'created_time', 'from', 'id', 'attachment', 'object', 'parent', 'message_tags']
-    data = graph.get(post_id + "/comments", page=False,
-                     retry=retries, limit=limits, summary=1, filter='stream', fields=fields)
-    comments = data['data']
-    # logger.info(f'{post_id}: {len(comments)}')
-    return comments
+    try:
+        data = graph.get(post_id + "/comments", page=False,
+                         retry=retries, limit=limits, summary=1, filter='stream', fields=fields)
+        comments = data['data']
+        # logger.info(f'{post_id}: {len(comments)}')
+        return comments
+    except FacebookError as e:  # some posts are deleted before their comments are downloaded
+        if 'does not exist' in e.message:
+            with open('errors.txt', 'a+') as f:
+                f.write('Post {} does not exist.\n'.format(post_id))
+        else:
+            raise e
+    return []
 
 
 @wait_if_limit_reached
